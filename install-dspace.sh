@@ -53,10 +53,15 @@ fi
 command -v pm2 >/dev/null || npm install --global pm2
 
 systemctl enable --now postgresql
+# psql does not interpolate variables in -c SQL; feed SQL through stdin.
 if ! runuser -u postgres -- psql -tAc "SELECT 1 FROM pg_roles WHERE rolname='$DB_USER'" | grep -q 1; then
-  runuser -u postgres -- psql -v ON_ERROR_STOP=1 -v dbpass="$DB_PASS" -c "CREATE ROLE \"$DB_USER\" LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE PASSWORD :'dbpass';"
+  runuser -u postgres -- psql -X -v ON_ERROR_STOP=1 -v dbuser="$DB_USER" -v dbpass="$DB_PASS" <<'SQL'
+CREATE ROLE :"dbuser" LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE PASSWORD :'dbpass';
+SQL
 else
-  runuser -u postgres -- psql -v ON_ERROR_STOP=1 -v dbpass="$DB_PASS" -c "ALTER ROLE \"$DB_USER\" WITH LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE PASSWORD :'dbpass';"
+  runuser -u postgres -- psql -X -v ON_ERROR_STOP=1 -v dbuser="$DB_USER" -v dbpass="$DB_PASS" <<'SQL'
+ALTER ROLE :"dbuser" WITH LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE PASSWORD :'dbpass';
+SQL
 fi
 if ! runuser -u postgres -- psql -tAc "SELECT 1 FROM pg_database WHERE datname='$DB_NAME'" | grep -q 1; then
   runuser -u postgres -- createdb --owner="$DB_USER" --encoding=UTF8 "$DB_NAME"
