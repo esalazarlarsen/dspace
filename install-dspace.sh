@@ -72,9 +72,11 @@ getent group solr >/dev/null || groupadd --system solr
 id solr >/dev/null 2>&1 || useradd --system --gid solr --home-dir /var/solr --shell /usr/sbin/nologin solr
 if [[ ! -x "$SOLR_DIR/bin/solr" ]]; then
   tmp=$(mktemp -d); trap 'rm -rf "$tmp"' EXIT
-  curl -fL "https://archive.apache.org/dist/solr/solr/$SOLR_VERSION/solr-$SOLR_VERSION.tgz" -o "$tmp/solr.tgz"
-  tar -xzf "$tmp/solr.tgz" -C "$tmp"
-  "$tmp/solr-$SOLR_VERSION/bin/install_solr_service.sh" "$tmp/solr-$SOLR_VERSION.tgz" -n -i "$SOLR_BASE_DIR" -d /var/solr -u solr -s solr -p 8983
+  solr_archive="$tmp/solr-$SOLR_VERSION.tgz"
+  curl -fL "https://archive.apache.org/dist/solr/solr/$SOLR_VERSION/solr-$SOLR_VERSION.tgz" -o "$solr_archive"
+  tar -xzf "$solr_archive" -C "$tmp"
+  install -d -m 0755 "$SOLR_BASE_DIR"
+  "$tmp/solr-$SOLR_VERSION/bin/install_solr_service.sh" "$solr_archive" -n -i "$SOLR_BASE_DIR" -d /var/solr -u solr -s solr -p 8983
 fi
 install -d -o solr -g solr -m 0750 /var/solr/data/configsets
 if [[ -f /etc/default/solr.in.sh ]]; then
